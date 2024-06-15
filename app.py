@@ -4,6 +4,7 @@ from bson import ObjectId
 from datetime import datetime, date, timedelta
 import pytz
 import openai
+import os
 
 client = MongoClient(os.environ['MONGODB_URI'])
 db = client['CoachLife']
