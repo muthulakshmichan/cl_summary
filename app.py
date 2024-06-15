@@ -5,12 +5,13 @@ from datetime import datetime, date, timedelta
 import pytz
 import openai
 
-client = MongoClient('mongodb+srv://tgdev:technology-1@cluster0.0pefygc.mongodb.net')
+client = MongoClient(os.environ['MONGODB_URI'])
 db = client['CoachLife']
 player_learning_collection = db['Player Learning']
 prompts_collection = db['Prompts']
 
-openai.api_key = "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"
+# Set up the OpenAI API key
+openai.api_key = os.environ['OPENAI_API_KEY']
 
 def fetch_prompts():
     prompt_doc = prompts_collection.find_one({"$or": [{"coach_prompt": {"$exists": True}}, {"parent_prompt": {"$exists": True}}]})
