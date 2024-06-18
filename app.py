@@ -100,10 +100,19 @@ def summarize_comments(comments, prompt):
 def lambda_handler(event, context):
     print("Received event:", event)
     try:
-        player_id = event.get("player_id")
-        summary_type = event.get("summary_type")
-        start_date = event.get("start_date")
-        end_date = event.get("end_date")
+        # Check if the input is coming from API Gateway where the body might be a JSON string
+        if 'body' in event:
+            body = event['body']
+            # If body is a string, parse it as JSON
+            if isinstance(body, str):
+                body = json.loads(body)
+        else:
+            body = event
+
+        player_id = body.get("player_id")
+        summary_type = body.get("summary_type")
+        start_date = body.get("start_date")
+        end_date = body.get("end_date")
 
         if not player_id or not summary_type:
             return {
@@ -141,5 +150,4 @@ def lambda_handler(event, context):
             "statusCode": 500,
             "body": json.dumps({"error": str(e)})
         }
-
 
