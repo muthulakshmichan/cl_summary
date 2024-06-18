@@ -22,14 +22,11 @@ def fetch_prompts():
         raise ValueError("Prompts not found in the database")
 
 def fetch_comments(player_id, start_date=None, end_date=None):
-    start_date_obj = None
-    end_date_obj = None
-    
     if start_date and end_date:
         start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
         end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
     else:
-        # If either start date or end date is not provided, fetch comments for the current month
+        # Fetch comments for the current month if no date range provided
         today = date.today()
         start_date_obj = datetime(today.year, today.month, 1)
         end_date_obj = datetime(today.year, today.month + 1, 1) - timedelta(days=1)
@@ -72,7 +69,6 @@ def fetch_comments(player_id, start_date=None, end_date=None):
 
     comments = list(player_learning_collection.aggregate(pipeline))
     print(f"Found {len(comments)} comments")
-    # print(comments)
     return comments
 
 def summarize_comments(comments, prompt):
@@ -83,7 +79,6 @@ def summarize_comments(comments, prompt):
         return "No valid comments to summarize."
 
     combined_comments = " ".join(comment['Comment'] for comment in filtered_comments)
-    # print(f"Summarizing combined comments: {combined_comments}")
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
