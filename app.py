@@ -144,7 +144,11 @@ def lambda_handler(event, context):
             "statusCode": 200,
             "body": json.dumps(response_body),
             "headers": {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",  # Allow CORS from all origins
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",  # Allow specified methods
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",  # Allow specified headers
+                "Access-Control-Max-Age": "3600"  # Cache preflight response for 1 hour
             }
         }
 
