@@ -27,3 +27,4 @@ jobs:
             --function-name CL_CoachParen_Summary \
             --image-uri $REGISTRY/$REPOSITORY:$IMAGE_TAG
             
+            
