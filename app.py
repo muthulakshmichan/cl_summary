@@ -139,10 +139,13 @@ def lambda_handler(event, context):
                     "body": json.dumps({"error": "Invalid summary type. Please specify 'coach' or 'parent'."})
                 }
 
-        response_body = {"summary": summary}
+        response_body = {"summary": summary.replace("\n", "\\n")}
         return {
             "statusCode": 200,
-            "body": json.dumps(response_body)
+            "body": json.dumps(response_body),
+            "headers": {
+                "Content-Type": "application/json"
+            }
         }
 
     except Exception as e:
@@ -150,4 +153,3 @@ def lambda_handler(event, context):
             "statusCode": 500,
             "body": json.dumps({"error": str(e)})
         }
-
