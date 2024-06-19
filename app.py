@@ -15,9 +15,9 @@ prompts_collection = db['Prompts']
 openai.api_key = os.environ['OPENAI_API_KEY']
 
 def fetch_prompts():
-    prompt_doc = prompts_collection.find_one({"$or": [{"coach_prompt": {"$exists": True}}, {"parent_prompt": {"$exists": True}}]})
+    prompt_doc = prompts_collection.find_one({"$or": [{"coach_prompt": {"$exists": True}}, {"parent_prompt": {"$exists": True}}, {"overall_prompt": {"$exists": True}}]})
     if prompt_doc:
-        return prompt_doc.get("coach_prompt", ""), prompt_doc.get("parent_prompt", "")
+        return prompt_doc.get("coach_prompt", ""), prompt_doc.get("parent_prompt", ""), prompt_doc.get("overall_prompt", "")
     else:
         raise ValueError("Prompts not found in the database")
 
@@ -71,19 +71,71 @@ def fetch_comments(player_id, start_date=None, end_date=None):
     print(f"Found {len(comments)} comments")
     return comments
 
-def summarize_comments(comments, prompt):
+def fetch_activities(player_id, start_date=None, end_date=None):
+    if start_date and end_date:
+        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+    else:
+        # Fetch activities for the current month if no date range provided
+        today = date.today()
+        start_date_obj = datetime(today.year, today.month, 1)
+        end_date_obj = datetime(today.year, today.month + 1, 1) - timedelta(days=1)
+
+    start_date_ist = pytz.timezone('Asia/Kolkata').localize(start_date_obj)
+    end_date_ist = pytz.timezone('Asia/Kolkata').localize(end_date_obj).replace(hour=23, minute=59, second=59)
+
+    # Convert IST to UTC
+    start_date_utc = start_date_ist.astimezone(pytz.utc)
+    end_date_utc = end_date_ist.astimezone(pytz.utc)
+    
+    print(f"Fetching activities for player {player_id} from {start_date_utc} to {end_date_utc}")
+
+    pipeline = [
+        {'$match': {'playerId': ObjectId(player_id)}},
+        {'$unwind': '$Activities'},
+        {'$addFields': {
+            'Activities.Date': {
+                '$dateFromString': {
+                    'dateString': '$Activities.Date',
+                    'format': '%Y-%m-%d %H:%M:%S',
+                    'timezone': 'Asia/Kolkata'
+                }
+            }
+        }},
+        {'$match': {
+            'Activities.Date': {
+                '$gte': start_date_utc,
+                '$lte': end_date_utc
+            }
+        }},
+        {'$project': {
+            'ActivityId': {'$toString': '$Activities._id'},  # Convert ObjectId to string
+            'Activity': '$Activities.Description',
+            'Date': '$Activities.Date',
+            '_id': 0
+        }}
+    ]
+
+    activities = list(player_learning_collection.aggregate(pipeline))
+    print(f"Found {len(activities)} activities")
+    return activities
+
+def summarize_comments_and_activities(comments, activities, prompt):
     # Filter out comments that do not have the 'Comment' field
     filtered_comments = [comment for comment in comments if 'Comment' in comment]
+    filtered_activities = [activity for activity in activities if 'Activity' in activity]
     
-    if not filtered_comments:
-        return "No valid comments to summarize."
+    if not filtered_comments and not filtered_activities:
+        return "No valid comments or activities to summarize."
 
-    combined_comments = " ".join(comment['Comment'] for comment in filtered_comments)
+    combined_text = "Comments: " + " ".join(comment['Comment'] for comment in filtered_comments)
+    combined_text += " Activities: " + " ".join(activity['Activity'] for activity in filtered_activities)
+    
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": prompt},
-            {"role": "user", "content": combined_comments}
+            {"role": "user", "content": combined_text}
         ]
     )
     summary = response['choices'][0]['message']['content'].strip()
@@ -115,24 +167,28 @@ def lambda_handler(event, context):
                 "body": json.dumps({"error": "player_id and summary_type are required fields"})
             }
 
-        coach_prompt, parent_prompt = fetch_prompts()
+        coach_prompt, parent_prompt, overall_prompt = fetch_prompts()
         
         comments = fetch_comments(player_id, start_date, end_date)
-        if not comments:
+        activities = fetch_activities(player_id, start_date, end_date)
+        
+        if not comments and not activities:
             return {
                 "statusCode": 404,
-                "body": json.dumps({"error": "No comments found in the given date range"})
+                "body": json.dumps({"error": "No comments or activities found in the given date range"})
             }
-            
+
         if summary_type.lower() == "coach":
             summary = summarize_comments(comments, coach_prompt)
         elif summary_type.lower() == "parent":
             summary = summarize_comments(comments, parent_prompt)
+        elif summary_type.lower() == "overall":
+            summary = summarize_comments_and_activities(comments, activities, overall_prompt)
         else:
             return {
-                    "statusCode": 400,
-                    "body": json.dumps({"error": "Invalid summary type. Please specify 'coach' or 'parent'."})
-                }
+                "statusCode": 400,
+                "body": json.dumps({"error": "Invalid summary type. Please specify 'coach', 'parent', or 'overall'."})
+            }
 
         response_body = {"summary": summary.replace("\n", "\\n")}
         return {
