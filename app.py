@@ -190,7 +190,7 @@ def lambda_handler(event, context):
                 "body": json.dumps({"error": "Invalid summary type. Please specify 'coach', 'parent', or 'overall'."})
             }
 
-        response_body = {"summary": summary.replace("\n", "\\n")}
+        response_body = {"summary": summary}
         return {
             "statusCode": 200,
             "body": json.dumps(response_body),
