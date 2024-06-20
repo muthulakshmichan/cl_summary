@@ -32,149 +32,165 @@ def fetch_prompts():
         raise ValueError("Prompts not found in the database")
 
 def fetch_comments(player_id, start_date=None, end_date=None):
-    if start_date and end_date:
-        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
-    else:
-        # Fetch comments for the current month if no date range provided
-        today = date.today()
-        start_date_obj = datetime(today.year, today.month, 1)
-        end_date_obj = datetime(today.year, today.month + 1, 1) - timedelta(days=1)
+    try:
+        if start_date and end_date:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+        else:
+            # Fetch comments for the current month if no date range provided
+            today = date.today()
+            start_date_obj = datetime(today.year, today.month, 1)
+            end_date_obj = datetime(today.year, today.month + 1, 1) - timedelta(days=1)
 
-    start_date_ist = pytz.timezone('Asia/Kolkata').localize(start_date_obj)
-    end_date_ist = pytz.timezone('Asia/Kolkata').localize(end_date_obj).replace(hour=23, minute, 59, second=59)
+        start_date_ist = pytz.timezone('Asia/Kolkata').localize(start_date_obj)
+        end_date_ist = pytz.timezone('Asia/Kolkata').localize(end_date_obj).replace(hour=23, minute=59, second=59)
 
-    # Convert IST to UTC
-    start_date_utc = start_date_ist.astimezone(pytz.utc)
-    end_date_utc = end_date_ist.astimezone(pytz.utc)
-    
-    print(f"Fetching comments for player {player_id} from {start_date_utc} to {end_date_utc}")
+        # Convert IST to UTC
+        start_date_utc = start_date_ist.astimezone(pytz.utc)
+        end_date_utc = end_date_ist.astimezone(pytz.utc)
+        
+        print(f"Fetching comments for player {player_id} from {start_date_utc} to {end_date_utc}")
 
-    pipeline = [
-        {'$match': {'playerId': ObjectId(player_id)}},
-        {'$unwind': '$Comments'},
-        {'$addFields': {
-            'Comments.CommentedOn': {
-                '$dateFromString': {
-                    'dateString': '$Comments.CommentedOn',
-                    'format': '%Y-%m-%d %H:%M:%S',
-                    'timezone': 'Asia/Kolkata'
+        pipeline = [
+            {'$match': {'playerId': ObjectId(player_id)}},
+            {'$unwind': '$Comments'},
+            {'$addFields': {
+                'Comments.CommentedOn': {
+                    '$dateFromString': {
+                        'dateString': '$Comments.CommentedOn',
+                        'format': '%Y-%m-%d %H:%M:%S',
+                        'timezone': 'Asia/Kolkata'
+                    }
                 }
-            }
-        }},
-        {'$match': {
-            'Comments.CommentedOn': {
-                '$gte': start_date_utc,
-                '$lte': end_date_utc
-            }
-        }},
-        {'$project': {
-            'CommentId': {'$toString': '$Comments._id'},  # Convert ObjectId to string
-            'Comment': '$Comments.Comment_En',
-            'CommentedBy': '$Comments.CommentedBy',
-            'CommentedOn': '$Comments.CommentedOn',
-            '_id': 0
-        }}
-    ]
+            }},
+            {'$match': {
+                'Comments.CommentedOn': {
+                    '$gte': start_date_utc,
+                    '$lte': end_date_utc
+                }
+            }},
+            {'$project': {
+                'CommentId': {'$toString': '$Comments._id'},  # Convert ObjectId to string
+                'Comment': '$Comments.Comment_En',
+                'CommentedBy': '$Comments.CommentedBy',
+                'CommentedOn': '$Comments.CommentedOn',
+                '_id': 0
+            }}
+        ]
 
-    comments = list(player_learning_collection.aggregate(pipeline))
-    print(f"Found {len(comments)} comments")
-    return comments
+        comments = list(player_learning_collection.aggregate(pipeline))
+        print(f"Found {len(comments)} comments")
+        return comments
+    except Exception as e:
+        print(f"Error fetching comments: {e}")
+        raise
 
 def fetch_activities(player_id, start_date=None, end_date=None):
-    if start_date and end_date:
-        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
-    else:
-        # Fetch activities for the current month if no date range provided
-        today = date.today()
-        start_date_obj = datetime(today.year, today.month, 1)
-        end_date_obj = datetime(today.year, today.month + 1, 1) - timedelta(days=1)
+    try:
+        if start_date and end_date:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+        else:
+            # Fetch activities for the current month if no date range provided
+            today = date.today()
+            start_date_obj = datetime(today.year, today.month, 1)
+            end_date_obj = datetime(today.year, today.month + 1, 1) - timedelta(days=1)
 
-    start_date_ist = pytz.timezone('Asia/Kolkata').localize(start_date_obj)
-    end_date_ist = pytz.timezone('Asia/Kolkata').localize(end_date_obj).replace(hour=23, minute=59, second=59)
+        start_date_ist = pytz.timezone('Asia/Kolkata').localize(start_date_obj)
+        end_date_ist = pytz.timezone('Asia/Kolkata').localize(end_date_obj).replace(hour=23, minute=59, second=59)
 
-    # Convert IST to UTC
-    start_date_utc = start_date_ist.astimezone(pytz.utc)
-    end_date_utc = end_date_ist.astimezone(pytz.utc)
-    
-    print(f"Fetching activities for player {player_id} from {start_date_utc} to {end_date_utc}")
+        # Convert IST to UTC
+        start_date_utc = start_date_ist.astimezone(pytz.utc)
+        end_date_utc = end_date_ist.astimezone(pytz.utc)
+        
+        print(f"Fetching activities for player {player_id} from {start_date_utc} to {end_date_utc}")
 
-    pipeline = [
-        {'$match': {'playerId': ObjectId(player_id)}},
-        {'$unwind': '$Activities'},
-        {'$addFields': {
-            'Activities.Date': {
-                '$dateFromString': {
-                    'dateString': '$Activities.Date',
-                    'format': '%Y-%m-%d %H:%M:%S',
-                    'timezone': 'Asia/Kolkata'
+        pipeline = [
+            {'$match': {'playerId': ObjectId(player_id)}},
+            {'$unwind': '$Activities'},
+            {'$addFields': {
+                'Activities.Date': {
+                    '$dateFromString': {
+                        'dateString': '$Activities.Date',
+                        'format': '%Y-%m-%d %H:%M:%S',
+                        'timezone': 'Asia/Kolkata'
+                    }
                 }
-            }
-        }},
-        {'$match': {
-            'Activities.Date': {
-                '$gte': start_date_utc,
-                '$lte': end_date_utc
-            }
-        }},
-        {'$project': {
-            'ActivityId': {'$toString': '$Activities._id'},  # Convert ObjectId to string
-            'Activity': '$Activities.Description',
-            'Date': '$Activities.Date',
-            '_id': 0
-        }}
-    ]
+            }},
+            {'$match': {
+                'Activities.Date': {
+                    '$gte': start_date_utc,
+                    '$lte': end_date_utc
+                }
+            }},
+            {'$project': {
+                'ActivityId': {'$toString': '$Activities._id'},  # Convert ObjectId to string
+                'Activity': '$Activities.Description',
+                'Date': '$Activities.Date',
+                '_id': 0
+            }}
+        ]
 
-    activities = list(player_learning_collection.aggregate(pipeline))
-    print(f"Found {len(activities)} activities")
-    return activities
+        activities = list(player_learning_collection.aggregate(pipeline))
+        print(f"Found {len(activities)} activities")
+        return activities
+    except Exception as e:
+        print(f"Error fetching activities: {e}")
+        raise
 
 def summarize_comments(comments, prompt):
-    # Filter out comments that do not have the 'Comment' field
-    filtered_comments = [comment for comment in comments if 'Comment' in comment]
-    
-    if not filtered_comments:
-        return "No valid comments to summarize."
+    try:
+        # Filter out comments that do not have the 'Comment' field
+        filtered_comments = [comment for comment in comments if 'Comment' in comment]
+        
+        if not filtered_comments:
+            return "No valid comments to summarize."
 
-    combined_text = " ".join(comment['Comment'] for comment in filtered_comments)
-    
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": combined_text}
-        ]
-    )
-    summary = response['choices'][0]['message']['content'].strip()
-    
-    print(f"Summary: {summary}")
-    
-    return summary
+        combined_text = " ".join(comment['Comment'] for comment in filtered_comments)
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": combined_text}
+            ]
+        )
+        summary = response['choices'][0]['message']['content'].strip()
+        
+        print(f"Summary: {summary}")
+        
+        return summary
+    except Exception as e:
+        print(f"Error summarizing comments: {e}")
+        raise
 
 def summarize_comments_and_activities(comments, activities, prompt):
-    # Filter out comments that do not have the 'Comment' field
-    filtered_comments = [comment for comment in comments if 'Comment' in comment]
-    filtered_activities = [activity for activity in activities if 'Activity' in activity]
-    
-    if not filtered_comments and not filtered_activities:
-        return "No valid comments or activities to summarize."
+    try:
+        # Filter out comments that do not have the 'Comment' field
+        filtered_comments = [comment for comment in comments if 'Comment' in comment]
+        filtered_activities = [activity for activity in activities if 'Activity' in activity]
+        
+        if not filtered_comments and not filtered_activities:
+            return "No valid comments or activities to summarize."
 
-    combined_text = "Comments: " + " ".join(comment['Comment'] for comment in filtered_comments)
-    combined_text += " Activities: " + " ".join(activity['Activity'] for activity in filtered_activities)
-    
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": combined_text}
-        ]
-    )
-    summary = response['choices'][0]['message']['content'].strip()
-    
-    print(f"Summary: {summary}")
-    
-    return summary
+        combined_text = "Comments: " + " ".join(comment['Comment'] for comment in filtered_comments)
+        combined_text += " Activities: " + " ".join(activity['Activity'] for activity in filtered_activities)
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": combined_text}
+            ]
+        )
+        summary = response['choices'][0]['message']['content'].strip()
+        
+        print(f"Summary: {summary}")
+        
+        return summary
+    except Exception as e:
+        print(f"Error summarizing comments and activities: {e}")
+        raise
 
 def lambda_handler(event, context):
     print("Received event:", event)
