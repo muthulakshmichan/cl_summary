@@ -15,9 +15,19 @@ prompts_collection = db['Prompts']
 openai.api_key = os.environ['OPENAI_API_KEY']
 
 def fetch_prompts():
-    prompt_doc = prompts_collection.find_one({"$or": [{"coach_prompt": {"$exists": True}}, {"parent_prompt": {"$exists": True}}, {"overall_prompt": {"$exists": True}}]})
+    prompt_doc = prompts_collection.find_one(
+        {"$or": [
+            {"coach_prompt": {"$exists": True}}, 
+            {"parent_prompt": {"$exists": True}}, 
+            {"overall_prompt": {"$exists": True}}
+        ]}
+    )
     if prompt_doc:
-        return prompt_doc.get("coach_prompt", ""), prompt_doc.get("parent_prompt", ""), prompt_doc.get("overall_prompt", "")
+        return (
+            prompt_doc.get("coach_prompt", ""), 
+            prompt_doc.get("parent_prompt", ""), 
+            prompt_doc.get("overall_prompt", "")
+        )
     else:
         raise ValueError("Prompts not found in the database")
 
@@ -32,7 +42,7 @@ def fetch_comments(player_id, start_date=None, end_date=None):
         end_date_obj = datetime(today.year, today.month + 1, 1) - timedelta(days=1)
 
     start_date_ist = pytz.timezone('Asia/Kolkata').localize(start_date_obj)
-    end_date_ist = pytz.timezone('Asia/Kolkata').localize(end_date_obj).replace(hour=23, minute=59, second=59)
+    end_date_ist = pytz.timezone('Asia/Kolkata').localize(end_date_obj).replace(hour=23, minute, 59, second=59)
 
     # Convert IST to UTC
     start_date_utc = start_date_ist.astimezone(pytz.utc)
@@ -142,6 +152,29 @@ def summarize_comments(comments, prompt):
     
     return summary
 
+def summarize_comments_and_activities(comments, activities, prompt):
+    # Filter out comments that do not have the 'Comment' field
+    filtered_comments = [comment for comment in comments if 'Comment' in comment]
+    filtered_activities = [activity for activity in activities if 'Activity' in activity]
+    
+    if not filtered_comments and not filtered_activities:
+        return "No valid comments or activities to summarize."
+
+    combined_text = "Comments: " + " ".join(comment['Comment'] for comment in filtered_comments)
+    combined_text += " Activities: " + " ".join(activity['Activity'] for activity in filtered_activities)
+    
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": combined_text}
+        ]
+    )
+    summary = response['choices'][0]['message']['content'].strip()
+    
+    print(f"Summary: {summary}")
+    
+    return summary
 
 def lambda_handler(event, context):
     print("Received event:", event)
