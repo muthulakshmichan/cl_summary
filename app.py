@@ -120,16 +120,14 @@ def fetch_activities(player_id, start_date=None, end_date=None):
     print(f"Found {len(activities)} activities")
     return activities
 
-def summarize_comments_and_activities(comments, activities, prompt):
+def summarize_comments(comments, prompt):
     # Filter out comments that do not have the 'Comment' field
     filtered_comments = [comment for comment in comments if 'Comment' in comment]
-    filtered_activities = [activity for activity in activities if 'Activity' in activity]
     
-    if not filtered_comments and not filtered_activities:
-        return "No valid comments or activities to summarize."
+    if not filtered_comments:
+        return "No valid comments to summarize."
 
-    combined_text = "Comments: " + " ".join(comment['Comment'] for comment in filtered_comments)
-    combined_text += " Activities: " + " ".join(activity['Activity'] for activity in filtered_activities)
+    combined_text = " ".join(comment['Comment'] for comment in filtered_comments)
     
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -143,6 +141,7 @@ def summarize_comments_and_activities(comments, activities, prompt):
     print(f"Summary: {summary}")
     
     return summary
+
 
 def lambda_handler(event, context):
     print("Received event:", event)
@@ -164,7 +163,14 @@ def lambda_handler(event, context):
         if not player_id or not summary_type:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": "player_id and summary_type are required fields"})
+                "body": json.dumps({"error": "player_id and summary_type are required fields"}),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                    "Access-Control-Max-Age": "3600"
+                }
             }
 
         coach_prompt, parent_prompt, overall_prompt = fetch_prompts()
@@ -175,7 +181,14 @@ def lambda_handler(event, context):
         if not comments and not activities:
             return {
                 "statusCode": 404,
-                "body": json.dumps({"error": "No comments or activities found in the given date range"})
+                "body": json.dumps({"error": "No comments or activities found in the given date range"}),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                    "Access-Control-Max-Age": "3600"
+                }
             }
 
         if summary_type.lower() == "coach":
@@ -187,7 +200,14 @@ def lambda_handler(event, context):
         else:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": "Invalid summary type. Please specify 'coach', 'parent', or 'overall'."})
+                "body": json.dumps({"error": "Invalid summary type. Please specify 'coach', 'parent', or 'overall'."}),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                    "Access-Control-Max-Age": "3600"
+                }
             }
 
         response_body = {"summary": summary}
@@ -196,15 +216,23 @@ def lambda_handler(event, context):
             "body": json.dumps(response_body),
             "headers": {
                 "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",  # Allow CORS from all origins
-                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",  # Allow specified methods
-                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",  # Allow specified headers
-                "Access-Control-Max-Age": "3600"  # Cache preflight response for 1 hour
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Max-Age": "3600"
             }
         }
 
     except Exception as e:
+        print(f"Error: {str(e)}")
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
+            "body": json.dumps({"error": str(e)}),
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Max-Age": "3600"
+            }
         }
