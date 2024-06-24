@@ -149,7 +149,7 @@ def summarize_comments(comments, prompt):
         combined_text = " ".join(comment['Comment'] for comment in filtered_comments)
         
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4-turbo",
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": combined_text}
