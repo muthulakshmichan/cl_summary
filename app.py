@@ -153,7 +153,8 @@ def summarize_comments(comments, prompt):
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": combined_text}
-            ]
+            ],
+            max_tokens=500
         )
         summary = response['choices'][0]['message']['content'].strip()
         
@@ -177,11 +178,12 @@ def summarize_comments_and_activities(comments, activities, prompt):
         combined_text += " Activities: " + " ".join(activity['Activity'] for activity in filtered_activities)
         
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4-turbo",
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": combined_text}
-            ]
+            ],
+            max_tokens=500
         )
         summary = response['choices'][0]['message']['content'].strip()
         
