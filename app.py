@@ -183,7 +183,7 @@ def summarize_comments_and_activities(comments, activities, prompt):
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": combined_text}
             ],
-            max_tokens=500
+            max_tokens=300
         )
         summary = response['choices'][0]['message']['content'].strip()
         
